@@ -5,6 +5,7 @@ import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
+from collections import deque, Counter
 
 HAND_LANDMARKER_PATH = "models/hand_landmarker.task"
 ASL_MODEL_PATH = "models/asl_alphabet_model.pkl"
@@ -36,6 +37,8 @@ if not cap.isOpened():
     print("Could not open webcam")
     exit()
     
+prediction_history = deque(maxlen=10)
+    
 while True:
     ret, frame = cap.read()
 
@@ -56,11 +59,14 @@ while True:
 
         row = landmarks_to_row(hand_landmarks)
 
-        prediction = asl_model.predict([row])[0]
+        prediction = asl_model.predict([row])[0]   
+        prediction_history.append(prediction)
+        
+        most_common = Counter(prediction_history).most_common(1)[0][0]
 
-    if prediction:
-        cv2.putText(frame, f"Prediction: {prediction}", (20, 50),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    if prediction_history:
+        cv2.putText(frame, f"Prediction: {most_common}", (20, 50),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
     cv2.imshow("ASL Prediction", frame)
 
