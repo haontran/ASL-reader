@@ -1,11 +1,10 @@
 import time
 import pickle
-
+from collections import deque, Counter
 import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
-from collections import deque, Counter
 
 HAND_LANDMARKER_PATH = "models/hand_landmarker.task"
 ASL_MODEL_PATH = "models/asl_alphabet_model.pkl"
@@ -20,6 +19,29 @@ def landmarks_to_row(hand_landmarks):
         row.extend([landmark.x, landmark.y, landmark.z])
 
     return row
+
+def normalize_landmarks(row):
+    wrist_x = row[0]
+    wrist_y = row[1]
+    wrist_z = row[2]
+
+    normalized = []
+
+    for i in range(0, len(row), 3):
+        x = row[i] - wrist_x
+        y = row[i + 1] - wrist_y
+        z = row[i + 2] - wrist_z
+
+        normalized.extend([x, y, z])
+
+    max_value = max(abs(value) for value in normalized)
+
+    if max_value == 0:
+        return normalized
+
+    normalized = [value / max_value for value in normalized]
+
+    return normalized
 
 base_options = python.BaseOptions(model_asset_path=HAND_LANDMARKER_PATH)
 
@@ -58,8 +80,9 @@ while True:
         hand_landmarks = result.hand_landmarks[0]
 
         row = landmarks_to_row(hand_landmarks)
+        normalized_row = normalize_landmarks(row)
 
-        prediction = asl_model.predict([row])[0]   
+        prediction = asl_model.predict([normalized_row])[0] 
         prediction_history.append(prediction)
         
         most_common = Counter(prediction_history).most_common(1)[0][0]
