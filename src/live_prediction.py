@@ -83,13 +83,21 @@ while True:
         normalized_row = normalize_landmarks(row)
 
         prediction = asl_model.predict([normalized_row])[0] 
+        probabilities = asl_model.predict_proba([normalized_row])[0]
         prediction_history.append(prediction)
-        
+
         most_common = Counter(prediction_history).most_common(1)[0][0]
+
+        class_index = list(asl_model.classes_).index(most_common)
+        confidence = probabilities[class_index]
+        
 
     if prediction_history:
         cv2.putText(frame, f"Prediction: {most_common}", (20, 50),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        
+        cv2.putText(frame, f"Confidence: {confidence:.2f}", (20, 90),
+            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
     cv2.imshow("ASL Prediction", frame)
 
